@@ -8,7 +8,9 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 - **OTP Verification Page**: Verify OTP codes during login or for sensitive admin actions
 - **Backup Codes**: 10 one-time backup codes for account recovery if authenticator is lost
 - **Admin Settings Page**: Configure OTP requirements for various admin actions with granular control
-- **Rate Limiting**: Protection against brute force attacks on backup codes (5 attempts, then 5-minute lockout)
+- **Rate Limiting**: Protection against brute force attacks:
+  - OTP codes: 5 attempts per minute, then 1-minute lockout
+  - Backup codes: 5 attempts, then 5-minute lockout
 - **Action-based OTP Protection**: Require OTP verification for sensitive operations like:
   - Clearing the database
   - Resetting the CTF
@@ -83,6 +85,7 @@ If you lose access to your authenticator app:
 - 6-digit codes that refresh every 30 seconds
 - OTP verification for admin actions is valid for 5 minutes
 - 10 backup codes generated on OTP setup (8 characters each, one-time use)
+- OTP rate limiting: 5 failed attempts triggers a 1-minute lockout
 - Backup code rate limiting: 5 failed attempts triggers a 5-minute lockout
 - Secrets are stored in plain text in the database. Consider enabling database encryption or application-level encryption for enhanced security in high-security environments.
 - Backup codes are stored as SHA-256 hashes for security

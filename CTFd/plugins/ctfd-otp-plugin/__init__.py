@@ -35,6 +35,8 @@ from CTFd.utils.user import get_current_user, is_admin
 # Rate limiting constants
 BACKUP_CODE_RATE_LIMIT_SECONDS = 300  # 5 minutes
 BACKUP_CODE_MAX_ATTEMPTS = 5  # Max attempts before lockout
+OTP_RATE_LIMIT_SECONDS = 60  # 1 minute
+OTP_MAX_ATTEMPTS = 5  # Max OTP attempts per minute
 
 
 class OTPSecrets(db.Model):
@@ -50,6 +52,9 @@ class OTPSecrets(db.Model):
     backup_codes = db.Column(db.Text, nullable=True)
     backup_code_attempts = db.Column(db.Integer, default=0)
     backup_code_lockout_until = db.Column(db.Float, nullable=True)
+    # OTP rate limiting fields
+    otp_attempts = db.Column(db.Integer, default=0)
+    otp_lockout_until = db.Column(db.Float, nullable=True)
 
     user = db.relationship("Users", foreign_keys=[user_id], lazy="select")
 
@@ -200,6 +205,44 @@ def get_remaining_backup_codes_count(otp_record):
         return len(codes)
     except (json.JSONDecodeError, TypeError):
         return 0
+
+
+def check_otp_rate_limit(otp_record):
+    """
+    Check if the user is rate-limited for OTP attempts.
+    Returns (is_allowed, time_remaining) tuple.
+    """
+    current_time = time.time()
+
+    # Check if user is locked out
+    if otp_record.otp_lockout_until:
+        if current_time < otp_record.otp_lockout_until:
+            time_remaining = int(otp_record.otp_lockout_until - current_time)
+            return False, time_remaining
+        else:
+            # Lockout expired, reset attempts
+            otp_record.otp_attempts = 0
+            otp_record.otp_lockout_until = None
+            db.session.commit()
+
+    return True, 0
+
+
+def record_otp_attempt(otp_record, success):
+    """Record an OTP attempt and apply rate limiting if needed."""
+    if success:
+        # Reset attempts on success
+        otp_record.otp_attempts = 0
+        otp_record.otp_lockout_until = None
+    else:
+        # Increment failed attempts
+        otp_record.otp_attempts = (otp_record.otp_attempts or 0) + 1
+
+        # Apply lockout if max attempts exceeded
+        if otp_record.otp_attempts >= OTP_MAX_ATTEMPTS:
+            otp_record.otp_lockout_until = time.time() + OTP_RATE_LIMIT_SECONDS
+
+    db.session.commit()
 
 
 def is_otp_enabled_for_user(user_id):
@@ -552,18 +595,41 @@ def verify():
                 # Login OTP verification
                 otp_record = OTPSecrets.query.filter_by(user_id=pending_user_id).first()
 
-                if otp_record and verify_otp(otp_record.secret, token):
-                    # OTP verified, complete login
-                    user = Users.query.filter_by(id=pending_user_id).first()
-                    if user:
-                        session.pop("otp_pending_user_id", None)
-                        session.pop("otp_next_url", None)
-                        session.pop("otp_action", None)
-                        login_user(user)
-                        flash("Login successful!", "success")
-                        return redirect(next_url)
+                if otp_record:
+                    # Check OTP rate limiting
+                    is_allowed, time_remaining = check_otp_rate_limit(otp_record)
+                    if not is_allowed:
+                        flash(
+                            f"Too many failed OTP attempts. Please wait {time_remaining} seconds.",
+                            "danger",
+                        )
+                        return render_template(
+                            "otp/verify.html",
+                            action=action,
+                            next_url=next_url,
+                            rate_limited=True,
+                            rate_limit_remaining=time_remaining,
+                        )
+
+                    if verify_otp(otp_record.secret, token):
+                        record_otp_attempt(otp_record, success=True)
+                        # OTP verified, complete login
+                        user = Users.query.filter_by(id=pending_user_id).first()
+                        if user:
+                            session.pop("otp_pending_user_id", None)
+                            session.pop("otp_next_url", None)
+                            session.pop("otp_action", None)
+                            login_user(user)
+                            flash("Login successful!", "success")
+                            return redirect(next_url)
+                    else:
+                        record_otp_attempt(otp_record, success=False)
+                        flash("Invalid OTP token. Please try again.", "danger")
+                        return render_template(
+                            "otp/verify.html", action=action, next_url=next_url
+                        )
                 else:
-                    flash("Invalid OTP token. Please try again.", "danger")
+                    flash("OTP not configured.", "danger")
                     return render_template(
                         "otp/verify.html", action=action, next_url=next_url
                     )
@@ -574,20 +640,38 @@ def verify():
                 if user:
                     otp_record = OTPSecrets.query.filter_by(user_id=user.id).first()
 
-                    if otp_record and verify_otp(otp_record.secret, token):
-                        # OTP verified for action
-                        session["otp_verified_action"] = action
-                        session["otp_verified_timestamp"] = time.time()
-                        session.pop("otp_action", None)
-                        flash(
-                            "OTP verified. You may proceed with the action.", "success"
-                        )
-                        return redirect(next_url)
-                    else:
-                        flash("Invalid OTP token. Please try again.", "danger")
-                        return render_template(
-                            "otp/verify.html", action=action, next_url=next_url
-                        )
+                    if otp_record:
+                        # Check OTP rate limiting
+                        is_allowed, time_remaining = check_otp_rate_limit(otp_record)
+                        if not is_allowed:
+                            flash(
+                                f"Too many failed OTP attempts. Please wait {time_remaining} seconds.",
+                                "danger",
+                            )
+                            return render_template(
+                                "otp/verify.html",
+                                action=action,
+                                next_url=next_url,
+                                rate_limited=True,
+                                rate_limit_remaining=time_remaining,
+                            )
+
+                        if verify_otp(otp_record.secret, token):
+                            record_otp_attempt(otp_record, success=True)
+                            # OTP verified for action
+                            session["otp_verified_action"] = action
+                            session["otp_verified_timestamp"] = time.time()
+                            session.pop("otp_action", None)
+                            flash(
+                                "OTP verified. You may proceed with the action.", "success"
+                            )
+                            return redirect(next_url)
+                        else:
+                            record_otp_attempt(otp_record, success=False)
+                            flash("Invalid OTP token. Please try again.", "danger")
+                            return render_template(
+                                "otp/verify.html", action=action, next_url=next_url
+                            )
 
     return redirect(url_for("auth.login"))
 
