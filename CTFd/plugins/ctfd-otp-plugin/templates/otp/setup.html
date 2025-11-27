@@ -79,7 +79,9 @@
                                 <p class="text-muted">Use your authenticator app (Google Authenticator, Authy, etc.) to scan this QR code:</p>
                                 
                                 <div class="text-center mb-3">
-                                    <div id="qrcode" class="d-inline-block p-3 bg-white border rounded"></div>
+                                    <div class="d-inline-block p-3 bg-white border rounded">
+                                        <img src="{{ qr_code_image }}" alt="OTP QR Code" width="200" height="200">
+                                    </div>
                                 </div>
                                 
                                 <div class="alert alert-secondary">
@@ -147,19 +149,4 @@
         </div>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script>
-{% if not otp_configured and provisioning_uri %}
-document.addEventListener('DOMContentLoaded', function() {
-    QRCode.toCanvas(document.createElement('canvas'), '{{ provisioning_uri }}', {
-        width: 200,
-        margin: 2
-    }, function(error, canvas) {
-        if (error) console.error(error);
-        document.getElementById('qrcode').appendChild(canvas);
-    });
-});
-{% endif %}
-</script>
 {% endblock %}

@@ -22,10 +22,10 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
    CTFd/plugins/ctfd-otp-plugin/
    ```
 
-2. Install the required Python dependency:
+2. Install the required Python dependencies:
 
    ```bash
-   pip install pyotp
+   pip install pyotp qrcode[pil]
    ```
 
 3. Restart CTFd
@@ -85,28 +85,28 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 
 ### Decorator for Custom Actions
 
-You can protect your own admin actions using the `require_otp_for_action` decorator:
+You can protect your own admin actions using the `require_otp_for_action` decorator by importing it directly from the plugin module:
 
 ```python
-from CTFd.plugins import get_plugin
-
-# Get the OTP plugin's decorator
-otp_plugin = get_plugin('ctfd-otp-plugin')
-require_otp = otp_plugin.require_otp_for_action
+# Import the decorator from the OTP plugin
+from CTFd.plugins.ctfd_otp_plugin import require_otp_for_action
 
 @app.route('/admin/my-action', methods=['POST'])
 @admins_only
-@require_otp('my_action')
+@require_otp_for_action('my_action')
 def my_protected_action():
     # This action will require OTP verification
     pass
 ```
+
+**Note:** Make sure to add a corresponding OTP setting (e.g., `otp_required_for_my_action`) in the admin settings if you want to make it configurable.
 
 ## Requirements
 
 - CTFd 3.x+
 - Python 3.7+
 - pyotp library
+- qrcode library (with pillow for image generation)
 
 ## License
 

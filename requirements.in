@@ -35,3 +35,4 @@ cffi==1.17.1
 six==1.17.0
 urllib3==2.5.0
 pyotp==2.9.0
+qrcode==8.0

@@ -8,7 +8,12 @@ It provides:
 - Admin settings page to configure OTP requirements for various admin actions
 """
 
+import base64
+import io
+import time
+
 import pyotp
+import qrcode
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from CTFd.cache import clear_config
@@ -69,6 +74,26 @@ def get_provisioning_uri(secret, email, issuer="CTFd"):
     return totp.provisioning_uri(name=email, issuer_name=issuer)
 
 
+def generate_qr_code_base64(data):
+    """Generate a QR code and return it as a base64-encoded PNG image."""
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return f"data:image/png;base64,{img_base64}"
+
+
 def is_otp_enabled_for_user(user_id):
     """Check if OTP is enabled for a specific user."""
     otp_record = OTPSecrets.query.filter_by(user_id=user_id).first()
@@ -127,11 +152,15 @@ def setup():
             secret, user.email, issuer=get_config("ctf_name") or "CTFd"
         )
 
+        # Generate QR code as base64 image (server-side)
+        qr_code_image = generate_qr_code_base64(provisioning_uri)
+
         return render_template(
             "otp/setup.html",
             otp_configured=False,
             secret=secret,
             provisioning_uri=provisioning_uri,
+            qr_code_image=qr_code_image,
             user=user,
         )
 
@@ -268,9 +297,7 @@ def verify():
                 if otp_record and verify_otp(otp_record.secret, token):
                     # OTP verified for action
                     session["otp_verified_action"] = action
-                    session["otp_verified_timestamp"] = __import__(
-                        "time"
-                    ).time()  # Unix timestamp
+                    session["otp_verified_timestamp"] = time.time()  # Unix timestamp
                     session.pop("otp_action", None)
                     flash("OTP verified. You may proceed with the action.", "success")
                     return redirect(next_url)
@@ -381,8 +408,6 @@ def require_otp_for_action(action):
                 return redirect(url_for("otp.setup"))
 
             # Check if OTP was recently verified for this action
-            import time
-
             verified_action = session.get("otp_verified_action")
             verified_timestamp = session.get("otp_verified_timestamp", 0)
             current_time = time.time()
