@@ -302,7 +302,8 @@ def verify():
             if otp_record and verify_otp(otp_record.secret, token):
                 # OTP verified, complete login
                 user = Users.query.filter_by(id=pending_user_id).first()
-                if user:
+                    session.pop("otp_next_url", None)
+                    session.pop("otp_action", None)
                     session.pop("otp_pending_user_id", None)
                     session.pop("otp_next_url", None)
                     session.pop("otp_action", None)
