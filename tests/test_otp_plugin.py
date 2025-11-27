@@ -190,7 +190,7 @@ class TestBackupCodeRateLimiting:
                 assert is_allowed, f"Attempt {i+1} should be allowed"
                 otp_plugin.record_backup_code_attempt(otp_record, success=False)
 
-            # 5th attempt triggers lockout
+            # 5th attempt should be allowed (lockout triggers after recording it)
             is_allowed, _ = otp_plugin.check_backup_code_rate_limit(otp_record)
             assert is_allowed, "5th attempt should be allowed"
             otp_plugin.record_backup_code_attempt(otp_record, success=False)
