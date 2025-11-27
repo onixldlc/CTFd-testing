@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 
 {% block stylesheets %}
-{{ Assets.css("/plugins/ctfd-otp-plugin/assets/otp.css") }}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('otp.static', filename='otp.css') }}">
 {% endblock %}
 
 {% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Two-Factor Authentication</h1>
+  </div>
+</div>
+
 <div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card mt-4">
+  <div class="row">
+    <div class="col-md-10 offset-md-1">
+      <div class="card">
                 <div class="card-header">
                     <h4 class="mb-0">
                         <i class="fas fa-shield-alt"></i> Two-Factor Authentication (OTP)
@@ -241,13 +248,14 @@
                         <li><a href="https://authy.com/" target="_blank">Authy</a></li>
                         <li><a href="https://www.microsoft.com/en-us/security/mobile-authenticator-app" target="_blank">Microsoft Authenticator</a></li>
                     </ul>
-                </div>
-            </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-{{ Assets.js("/plugins/ctfd-otp-plugin/assets/otp.js") }}
+  {{ super() }}
+  <script src="{{ url_for('otp.static', filename='otp.js') }}"></script>
 {% endblock %}

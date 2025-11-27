@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 
 {% block stylesheets %}
-{{ Assets.css("/plugins/ctfd-otp-plugin/assets/otp.css") }}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('otp.static', filename='otp.css') }}">
 {% endblock %}
 
 {% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Two-Factor Authentication Required</h1>
+  </div>
+</div>
+
 <div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
             <div class="card mt-5">
                 <div class="card-header text-center">
                     <h4 class="mb-0">
@@ -139,13 +146,14 @@
                 <small class="text-muted">
                     <i class="fas fa-question-circle"></i>
                     Having trouble? Contact your CTF administrator.
-                </small>
-            </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-{{ Assets.js("/plugins/ctfd-otp-plugin/assets/otp.js") }}
+  {{ super() }}
+  <script src="{{ url_for('otp.static', filename='otp.js') }}"></script>
 {% endblock %}

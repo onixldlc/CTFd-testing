@@ -6,7 +6,6 @@ Create Date: 2024-06-10 00:00:00.000000
 
 """
 
-from alembic import op
 import sqlalchemy as sa
 
 
@@ -17,7 +16,7 @@ branch_labels = None
 depends_on = None
 
 
-def upgrade():
+def upgrade(op=None):
     # Create OTP secrets table
     op.create_table(
         "otp_secrets",
@@ -36,5 +35,5 @@ def upgrade():
     )
 
 
-def downgrade():
+def downgrade(op=None):
     op.drop_table("otp_secrets")
