@@ -188,11 +188,13 @@ def setup():
                     user.email,
                     issuer=get_config("ctf_name") or "CTFd",
                 )
+                qr_code_image = generate_qr_code_base64(provisioning_uri)
                 return render_template(
                     "otp/setup.html",
                     otp_configured=False,
                     secret=otp_record.secret,
                     provisioning_uri=provisioning_uri,
+                    qr_code_image=qr_code_image,
                     user=user,
                     error="Invalid OTP token",
                 )
