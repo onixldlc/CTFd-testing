@@ -3,16 +3,15 @@
 /* OTP Input Styling */
 .otp-input,
 #token {
-    font-family: monospace;
-    font-size: 2rem;
-    letter-spacing: 0.5em;
-    padding-left: 1em;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.75rem;
+    letter-spacing: 0.4em;
     text-align: center;
 }
 
 .otp-input::placeholder,
 #token::placeholder {
-    letter-spacing: 0.3em;
+    letter-spacing: 0.2em;
 }
 
 /* QR Code Container */
@@ -21,78 +20,21 @@
     padding: 1rem;
     background-color: white;
     border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-}
-
-/* OTP Setup Card */
-.otp-setup-card {
-    border: none;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-.otp-setup-card .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.25rem;
 }
 
 /* OTP Status Indicators */
 .otp-status-enabled {
-    color: #198754;
+    color: #28a745;
 }
 
 .otp-status-disabled {
     color: #dc3545;
 }
 
-/* Action Protection Cards */
-.action-protection-card {
-    transition: all 0.2s ease-in-out;
-}
-
-.action-protection-card:hover {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-/* Form Switch Styling */
-.form-check.form-switch .form-check-input:checked {
-    background-color: var(--bs-success, #198754);
-    border-color: var(--bs-success, #198754);
-}
-
-/* Help Section */
-.otp-help-section {
-    background-color: #f8f9fa;
-    border-radius: 0.375rem;
-    padding: 1.5rem;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .otp-input {
-        font-size: 1.5rem;
-        letter-spacing: 0.3em;
-    }
-    
-    .qr-code-container canvas {
-        max-width: 100%;
-        height: auto;
-    }
-}
-
-/* Animation for Success State */
-@keyframes otpSuccess {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-.otp-success-animation {
-    animation: otpSuccess 0.5s ease-in-out;
-}
-
 /* Secret Key Display */
 .secret-key-display {
-    font-family: monospace;
+    font-family: 'Courier New', Courier, monospace;
     font-size: 0.9rem;
     background-color: #f8f9fa;
     padding: 0.5rem 1rem;
@@ -100,21 +42,15 @@
     word-break: break-all;
 }
 
-/* Warning Badges */
-.otp-warning-badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    background-color: #ffc107;
-    color: #000;
-    border-radius: 0.25rem;
+.grey-theme {
+    background-color: var(--bs-body-bg);
 }
 
-.otp-danger-badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
-    background-color: #dc3545;
-    color: #fff;
-    border-radius: 0.25rem;
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .otp-input,
+    #token {
+        font-size: 1.5rem;
+        letter-spacing: 0.3em;
+    }
 }
