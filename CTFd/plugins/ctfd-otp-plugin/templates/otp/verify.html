@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block stylesheets %}
+{{ Assets.css("/plugins/ctfd-otp-plugin/assets/otp.css") }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card mt-5">
+                <div class="card-header text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt"></i> OTP Verification Required
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    {% if action %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Action requires verification:</strong>
+                            <br>
+                            <span class="text-capitalize">{{ action | replace('_', ' ') }}</span>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-lock"></i>
+                            Please enter your OTP code to complete the login.
+                        </div>
+                    {% endif %}
+
+                    {% if rate_limited %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-clock"></i>
+                            <strong>Rate Limited:</strong> Too many failed attempts.
+                            Please wait {{ (rate_limit_remaining // 60) }} minutes and {{ (rate_limit_remaining % 60) }} seconds.
+                        </div>
+                    {% endif %}
+
+                    {% if show_backup_code %}
+                        <!-- Backup code entry form -->
+                        <form method="POST" action="{{ url_for('otp.verify') }}">
+                            <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                            <input type="hidden" name="use_backup_code" value="1">
+                            
+                            <div class="mb-4">
+                                <label for="backup_code" class="form-label">Enter Backup Code</label>
+                                <input type="text" 
+                                       class="form-control form-control-lg text-center text-uppercase" 
+                                       id="backup_code" 
+                                       name="backup_code" 
+                                       placeholder="XXXXXXXX" 
+                                       required 
+                                       maxlength="8"
+                                       autocomplete="off"
+                                       autofocus
+                                       {% if rate_limited %}disabled{% endif %}>
+                                <div class="form-text text-center">
+                                    Enter one of your 8-character backup codes
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100" {% if rate_limited %}disabled{% endif %}>
+                                <i class="fas fa-key"></i> Verify Backup Code
+                            </button>
+                        </form>
+                        
+                        <hr>
+                        
+                        <div class="text-center">
+                            <a href="{{ url_for('otp.verify') }}" class="btn btn-link">
+                                <i class="fas fa-arrow-left"></i> Use Authenticator App Instead
+                            </a>
+                        </div>
+                    {% else %}
+                        <!-- Regular OTP entry form -->
+                        <form method="POST" action="{{ url_for('otp.verify') }}">
+                            <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                            
+                            <div class="mb-4">
+                                <label for="token" class="form-label">Enter OTP Code</label>
+                                <input type="text" 
+                                       class="form-control form-control-lg text-center" 
+                                       id="token" 
+                                       name="token" 
+                                       placeholder="000000" 
+                                       required 
+                                       maxlength="6" 
+                                       pattern="[0-9]{6}"
+                                       autocomplete="one-time-code"
+                                       inputmode="numeric"
+                                       autofocus>
+                                <div class="form-text text-center">
+                                    Enter the 6-digit code from your authenticator app
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-check"></i> Verify
+                            </button>
+                        </form>
+                        
+                        <hr>
+                        
+                        <div class="text-center">
+                            <form method="POST" action="{{ url_for('otp.verify') }}" class="d-inline">
+                                <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                                <input type="hidden" name="use_backup_code" value="1">
+                                <input type="hidden" name="backup_code" value="">
+                                <button type="submit" class="btn btn-link text-muted">
+                                    <i class="fas fa-key"></i> Use a Backup Code
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('auth.logout') }}" class="btn btn-link text-muted">
+                            <i class="fas fa-sign-out-alt"></i> Cancel and Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-question-circle"></i>
+                    Having trouble? Contact your CTF administrator.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ Assets.js("/plugins/ctfd-otp-plugin/assets/otp.js") }}
+{% endblock %}

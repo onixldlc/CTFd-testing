@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block stylesheets %}
+{{ Assets.css("/plugins/ctfd-otp-plugin/assets/otp.css") }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt"></i> Two-Factor Authentication (OTP)
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    {% if otp_configured and otp_just_enabled %}
+                        <!-- Just enabled OTP - Show backup codes -->
+                        <div class="text-center mb-4">
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle fa-3x mb-3"></i>
+                                <h5>{% if backup_codes_regenerated %}Backup Codes Regenerated{% else %}Two-Factor Authentication is Now Enabled!{% endif %}</h5>
+                                <p class="mb-0">Your account is protected with OTP authentication.</p>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Save Your Backup Codes</h5>
+                            <p>These backup codes can be used to access your account if you lose your authenticator device. Each code can only be used once.</p>
+                            <p class="mb-0"><strong>Important:</strong> Store these codes in a safe place. You won't be able to see them again!</p>
+                        </div>
+
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6>Your Backup Codes:</h6>
+                                <div class="row">
+                                    {% for code in backup_codes %}
+                                        <div class="col-6 col-md-4 mb-2">
+                                            <code class="fs-5 user-select-all">{{ code }}</code>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <hr>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="copyBackupCodes()">
+                                    <i class="fas fa-copy"></i> Copy All Codes
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <a href="{{ url_for('otp.setup') }}" class="btn btn-primary">
+                                <i class="fas fa-check"></i> I've Saved My Codes
+                            </a>
+                        </div>
+
+                        <script>
+                            function copyBackupCodes() {
+                                var codes = [{% for code in backup_codes %}"{{ code }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+                                navigator.clipboard.writeText(codes.join('\n')).then(function() {
+                                    alert('Backup codes copied to clipboard!');
+                                });
+                            }
+                        </script>
+
+                    {% elif otp_configured %}
+                        <!-- OTP is already configured -->
+                        <div class="text-center mb-4">
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle fa-3x mb-3"></i>
+                                <h5>Two-Factor Authentication is Enabled</h5>
+                                <p class="mb-0">Your account is protected with OTP authentication.</p>
+                            </div>
+                        </div>
+
+                        {% if remaining_backup_codes is defined %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-key"></i>
+                                <strong>Backup Codes:</strong> You have {{ remaining_backup_codes }} backup codes remaining.
+                                {% if remaining_backup_codes <= 3 %}
+                                    <br><small class="text-warning">Consider regenerating your backup codes soon.</small>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Regenerate Secret</h6>
+                                        <p class="small text-muted">Generate a new OTP secret. You'll need to set up your authenticator app again.</p>
+                                        <form method="POST" action="{{ url_for('otp.setup') }}">
+                                            <input type="hidden" name="action" value="regenerate">
+                                            <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                                            <div class="mb-3">
+                                                <input type="text" class="form-control" name="token" placeholder="Enter current OTP code" required maxlength="6" pattern="[0-9]{6}">
+                                            </div>
+                                            <button type="submit" class="btn btn-warning btn-sm">
+                                                <i class="fas fa-sync"></i> Regenerate
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Regenerate Backup Codes</h6>
+                                        <p class="small text-muted">Generate new backup codes. Old codes will be invalidated.</p>
+                                        <form method="POST" action="{{ url_for('otp.setup') }}">
+                                            <input type="hidden" name="action" value="regenerate_backup_codes">
+                                            <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                                            <div class="mb-3">
+                                                <input type="text" class="form-control" name="token" placeholder="Enter current OTP code" required maxlength="6" pattern="[0-9]{6}">
+                                            </div>
+                                            <button type="submit" class="btn btn-info btn-sm">
+                                                <i class="fas fa-key"></i> New Codes
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Disable OTP</h6>
+                                        <p class="small text-muted">Turn off two-factor authentication for your account.</p>
+                                        <form method="POST" action="{{ url_for('otp.setup') }}">
+                                            <input type="hidden" name="action" value="disable">
+                                            <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                                            <div class="mb-3">
+                                                <input type="text" class="form-control" name="token" placeholder="Enter current OTP code" required maxlength="6" pattern="[0-9]{6}">
+                                            </div>
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-times"></i> Disable OTP
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    {% elif otp_just_disabled %}
+                        <!-- OTP was just disabled -->
+                        <div class="text-center mb-4">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle fa-3x mb-3"></i>
+                                <h5>Two-Factor Authentication Disabled</h5>
+                                <p class="mb-0">OTP has been removed from your account. You can set it up again anytime.</p>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <a href="{{ url_for('otp.setup') }}" class="btn btn-primary">
+                                <i class="fas fa-shield-alt"></i> Set Up OTP Again
+                            </a>
+                        </div>
+                    {% else %}
+                        <!-- OTP setup -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Step 1: Scan QR Code</h5>
+                                <p class="text-muted">Use your authenticator app (Google Authenticator, Authy, etc.) to scan this QR code:</p>
+                                
+                                <div class="text-center mb-3">
+                                    <div class="d-inline-block p-3 bg-white border rounded">
+                                        <img src="{{ qr_code_image }}" alt="QR code for two-factor authentication setup" width="200" height="200">
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-secondary">
+                                    <strong>Manual Entry:</strong>
+                                    <p class="small mb-0">If you can't scan the QR code, enter this secret manually:</p>
+                                    <code class="user-select-all">{{ secret }}</code>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h5>Step 2: Verify Code</h5>
+                                <p class="text-muted">Enter the 6-digit code from your authenticator app to complete setup:</p>
+                                
+                                <form method="POST" action="{{ url_for('otp.setup') }}">
+                                    <input type="hidden" name="action" value="enable">
+                                    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                                    
+                                    <div class="mb-3">
+                                        <label for="token" class="form-label">OTP Code</label>
+                                        <input type="text" class="form-control form-control-lg text-center" 
+                                               id="token" name="token" 
+                                               placeholder="000000" 
+                                               required 
+                                               maxlength="6" 
+                                               pattern="[0-9]{6}"
+                                               autocomplete="one-time-code"
+                                               inputmode="numeric">
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                                        <i class="fas fa-check"></i> Enable Two-Factor Authentication
+                                    </button>
+                                </form>
+                                
+                                <hr>
+                                
+                                <form method="POST" action="{{ url_for('otp.setup') }}" class="mt-3">
+                                    <input type="hidden" name="action" value="regenerate">
+                                    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-sync"></i> Generate New Secret
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">About Two-Factor Authentication</h5>
+                </div>
+                <div class="card-body">
+                    <p>Two-factor authentication adds an extra layer of security to your account. When enabled, you'll need to enter a code from your authenticator app in addition to your password.</p>
+                    
+                    <h6>Backup Codes</h6>
+                    <p>When you enable OTP, you'll receive 10 backup codes. Each code can be used once to access your account if you lose your authenticator device. Store them safely!</p>
+                    
+                    <h6>Recommended Authenticator Apps:</h6>
+                    <ul>
+                        <li><a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2" target="_blank">Google Authenticator</a></li>
+                        <li><a href="https://authy.com/" target="_blank">Authy</a></li>
+                        <li><a href="https://www.microsoft.com/en-us/security/mobile-authenticator-app" target="_blank">Microsoft Authenticator</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ Assets.js("/plugins/ctfd-otp-plugin/assets/otp.js") }}
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends "admin/base.html" %}
+
+{% block stylesheets %}
+{{ Assets.css("/plugins/ctfd-otp-plugin/assets/otp.css") }}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt"></i> OTP Plugin Settings
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('otp.admin_settings') }}">
+                        <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                        
+                        <!-- Global OTP Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Global Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="otp_enabled" name="otp_enabled" 
+                                           {% if otp_enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="otp_enabled">
+                                        <strong>Enable OTP Plugin</strong>
+                                    </label>
+                                    <div class="form-text">
+                                        Master switch to enable or disable OTP functionality across the platform.
+                                    </div>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="otp_required_for_admins" name="otp_required_for_admins"
+                                           {% if otp_required_for_admins %}checked{% endif %}>
+                                    <label class="form-check-label" for="otp_required_for_admins">
+                                        <strong>Require OTP for Admin Login</strong>
+                                    </label>
+                                    <div class="form-text">
+                                        When enabled, administrators must have OTP configured and verify during login.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Admin Action OTP Requirements -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">Admin Action Protection</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">
+                                    Configure which admin actions require OTP verification. 
+                                    Admins must have OTP enabled on their account to perform these actions.
+                                </p>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="otp_required_for_clear_db" name="otp_required_for_clear_db"
+                                                   {% if otp_required_for_clear_db %}checked{% endif %}>
+                                            <label class="form-check-label" for="otp_required_for_clear_db">
+                                                <i class="fas fa-database text-danger"></i> Clear Database
+                                            </label>
+                                            <div class="form-text">
+                                                Require OTP to clear database tables
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="otp_required_for_reset" name="otp_required_for_reset"
+                                                   {% if otp_required_for_reset %}checked{% endif %}>
+                                            <label class="form-check-label" for="otp_required_for_reset">
+                                                <i class="fas fa-undo text-danger"></i> Reset CTF
+                                            </label>
+                                            <div class="form-text">
+                                                Require OTP to reset CTF data
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="otp_required_for_user_delete" name="otp_required_for_user_delete"
+                                                   {% if otp_required_for_user_delete %}checked{% endif %}>
+                                            <label class="form-check-label" for="otp_required_for_user_delete">
+                                                <i class="fas fa-user-times text-danger"></i> Delete Users
+                                            </label>
+                                            <div class="form-text">
+                                                Require OTP to delete user accounts
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="otp_required_for_export" name="otp_required_for_export"
+                                                   {% if otp_required_for_export %}checked{% endif %}>
+                                            <label class="form-check-label" for="otp_required_for_export">
+                                                <i class="fas fa-file-export text-warning"></i> Export Data
+                                            </label>
+                                            <div class="form-text">
+                                                Require OTP to export CTF data
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="otp_required_for_import" name="otp_required_for_import"
+                                                   {% if otp_required_for_import %}checked{% endif %}>
+                                            <label class="form-check-label" for="otp_required_for_import">
+                                                <i class="fas fa-file-import text-warning"></i> Import Data
+                                            </label>
+                                            <div class="form-text">
+                                                Require OTP to import CTF data
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="otp_required_for_config_change" name="otp_required_for_config_change"
+                                                   {% if otp_required_for_config_change %}checked{% endif %}>
+                                            <label class="form-check-label" for="otp_required_for_config_change">
+                                                <i class="fas fa-cog text-info"></i> Change Configuration
+                                            </label>
+                                            <div class="form-text">
+                                                Require OTP to change CTF configuration
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> Save Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Quick Links -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <a href="{{ url_for('otp.setup') }}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-user-shield"></i> Configure Your OTP
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="{{ url_for('admin.users_listing') }}" class="btn btn-outline-secondary w-100 mb-2">
+                                <i class="fas fa-users"></i> Manage Users
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Help Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle"></i> About OTP
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>What is OTP?</h6>
+                    <p>
+                        OTP (One-Time Password) is a time-based authentication method that provides 
+                        an additional layer of security beyond just passwords. Users must have an 
+                        authenticator app (like Google Authenticator, Authy, or Microsoft Authenticator) 
+                        to generate these codes.
+                    </p>
+                    
+                    <h6>How does it work?</h6>
+                    <ol>
+                        <li>Users set up OTP by scanning a QR code with their authenticator app</li>
+                        <li>The app generates a new 6-digit code every 30 seconds</li>
+                        <li>When OTP is required, users enter the current code from their app</li>
+                    </ol>
+                    
+                    <div class="alert alert-info">
+                        <strong>Tip:</strong> Before requiring OTP for admin actions, make sure all 
+                        administrators have set up OTP on their accounts. Otherwise, they may be 
+                        locked out of sensitive functions.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ Assets.js("/plugins/ctfd-otp-plugin/assets/otp.js") }}
+{% endblock %}
