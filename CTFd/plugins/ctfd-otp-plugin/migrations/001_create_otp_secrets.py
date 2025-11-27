@@ -26,6 +26,8 @@ def upgrade():
         sa.Column("secret", sa.String(length=32), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=True, default=False),
         sa.Column("backup_codes", sa.Text(), nullable=True),
+        sa.Column("backup_code_attempts", sa.Integer(), nullable=True, default=0),
+        sa.Column("backup_code_lockout_until", sa.Float(), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id"),

@@ -6,7 +6,9 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 
 - **OTP Setup Page**: Users can configure their authenticator apps by scanning a QR code or manually entering a secret key
 - **OTP Verification Page**: Verify OTP codes during login or for sensitive admin actions
+- **Backup Codes**: 10 one-time backup codes for account recovery if authenticator is lost
 - **Admin Settings Page**: Configure OTP requirements for various admin actions with granular control
+- **Rate Limiting**: Protection against brute force attacks on backup codes (5 attempts, then 5-minute lockout)
 - **Action-based OTP Protection**: Require OTP verification for sensitive operations like:
   - Clearing the database
   - Resetting the CTF
@@ -37,6 +39,16 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 1. Navigate to `/otp/setup` as an authenticated user
 2. Scan the QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)
 3. Enter the 6-digit code from your app to verify and enable OTP
+4. **Important**: Save the 10 backup codes shown after setup - these are one-time use codes for account recovery
+
+### Using Backup Codes
+
+If you lose access to your authenticator app:
+
+1. On the OTP verification page, click "Use a Backup Code"
+2. Enter one of your 8-character backup codes
+3. Each backup code can only be used once
+4. After logging in, regenerate new backup codes from the OTP setup page
 
 ### Admin Configuration
 
@@ -70,7 +82,10 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 - Uses TOTP (Time-based One-Time Password) algorithm
 - 6-digit codes that refresh every 30 seconds
 - OTP verification for admin actions is valid for 5 minutes
+- 10 backup codes generated on OTP setup (8 characters each, one-time use)
+- Backup code rate limiting: 5 failed attempts triggers a 5-minute lockout
 - Secrets are stored in plain text in the database. Consider enabling database encryption or application-level encryption for enhanced security in high-security environments.
+- Backup codes are stored as SHA-256 hashes for security
 
 ## API Endpoints
 
