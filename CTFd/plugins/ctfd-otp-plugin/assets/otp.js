@@ -111,32 +111,11 @@
     }
 
     /**
-     * Toggle setting visibility based on master switch
-     */
-    function initSettingsToggle() {
-        const masterSwitch = document.getElementById('otp_enabled');
-        const dependentSettings = document.querySelectorAll('.otp-dependent-setting');
-        
-        if (masterSwitch && dependentSettings.length > 0) {
-            function updateDependentSettings() {
-                dependentSettings.forEach(function(setting) {
-                    setting.disabled = !masterSwitch.checked;
-                    setting.closest('.form-check').classList.toggle('text-muted', !masterSwitch.checked);
-                });
-            }
-            
-            masterSwitch.addEventListener('change', updateDependentSettings);
-            updateDependentSettings();
-        }
-    }
-
-    /**
      * Initialize all OTP functionality
      */
     function init() {
         initOTPInput();
         initCopySecret();
-        initSettingsToggle();
     }
 
     // Initialize when DOM is ready

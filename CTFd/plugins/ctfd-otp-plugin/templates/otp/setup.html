@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block stylesheets %}
+{{ Assets.css("/plugins/ctfd-otp-plugin/assets/otp.css") }}
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row justify-content-center">
@@ -163,4 +167,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ Assets.js("/plugins/ctfd-otp-plugin/assets/otp.js") }}
 {% endblock %}
