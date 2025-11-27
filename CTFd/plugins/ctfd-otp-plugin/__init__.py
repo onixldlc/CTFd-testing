@@ -83,8 +83,16 @@ def verify_otp(secret, token):
     return totp.verify(token, valid_window=1)
 
 
-def get_provisioning_uri(secret, email, issuer="CTFd"):
+def get_provisioning_uri(secret, email, issuer=None):
     """Generate a provisioning URI for QR codes."""
+    if not issuer:
+        issuer = "CTFd"
+    if not email:
+        email = "user@ctfd"
+    # Ensure both are strings
+    issuer = str(issuer) if issuer else "CTFd"
+    email = str(email) if email else "user@ctfd"
+    
     totp = pyotp.TOTP(secret)
     return totp.provisioning_uri(name=email, issuer_name=issuer)
 
@@ -299,9 +307,11 @@ def setup():
             db.session.commit()
 
         # Generate provisioning URI for QR code
-        provisioning_uri = get_provisioning_uri(
-            secret, user.email, issuer=get_config("ctf_name") or "CTFd"
-        )
+        ctf_name = get_config("ctf_name")
+        issuer = str(ctf_name) if ctf_name else "CTFd"
+        user_email = str(user.email) if user.email else f"user{user.id}@ctfd"
+        
+        provisioning_uri = get_provisioning_uri(secret, user_email, issuer=issuer)
 
         # Generate QR code as base64 image (server-side)
         qr_code_image = generate_qr_code_base64(provisioning_uri)
@@ -858,3 +868,82 @@ def load(app):
             set_config("otp_required_for_user_delete", False)
         if get_config("otp_required_for_config_change") is None:
             set_config("otp_required_for_config_change", False)
+
+    # Register before_request handler to check OTP for protected routes
+    app.before_request(_check_otp_requirements)
+
+
+def _check_otp_requirements():
+    """Check if OTP is required for the current request."""
+    # Skip for non-admin users
+    from CTFd.utils.user import is_admin, get_current_user
+
+    if not is_admin():
+        return None
+
+    # Get OTP settings
+    settings = get_otp_settings()
+    if not settings.get("otp_enabled"):
+        return None
+
+    # Check which action is being performed based on the route
+    action = None
+    endpoint = request.endpoint
+
+    # Map endpoints to actions
+    if endpoint == "admin.reset" and request.method == "POST":
+        action = "reset"
+    elif endpoint == "admin.import_ctf" and request.method == "POST":
+        action = "import"
+    elif endpoint == "admin.export_ctf":
+        action = "export"
+    elif endpoint == "admin.config" and request.method == "POST":
+        action = "config_change"
+    elif endpoint in ["api.users_user", "api.teams_team"] and request.method == "DELETE":
+        action = "user_delete"
+    elif endpoint in ["api.configs_config_list", "api.configs_config_detail"] and request.method in ["POST", "PATCH", "DELETE"]:
+        action = "config_change"
+
+    # If no action matched, allow the request
+    if not action:
+        return None
+
+    # Check if this action requires OTP
+    config_key = f"otp_required_for_{action}"
+    if not settings.get(config_key):
+        return None
+
+    # Check if user has OTP enabled
+    user = get_current_user()
+    if not user or not is_otp_enabled_for_user(user.id):
+        if request.endpoint and request.endpoint.startswith("api."):
+            # For API requests, return JSON error
+            from flask import jsonify
+            return jsonify({"success": False, "errors": ["OTP is required for this action but not configured on your account"]}), 403
+        else:
+            # For web requests, show flash message and redirect
+            flash("OTP is required for this action but not configured. Please set up OTP first.", "warning")
+            return redirect(url_for("otp.setup"))
+
+    # Check if OTP was recently verified for this action
+    verified_action = session.get("otp_verified_action")
+    verified_timestamp = session.get("otp_verified_timestamp", 0)
+    current_time = time.time()
+
+    # OTP verification is valid for 5 minutes
+    if verified_action == action and (current_time - verified_timestamp) < 300:
+        # Clear the verification after use for single-use actions
+        session.pop("otp_verified_action", None)
+        session.pop("otp_verified_timestamp", None)
+        return None
+
+    # OTP verification required
+    if request.endpoint and request.endpoint.startswith("api."):
+        # For API requests, return JSON error
+        from flask import jsonify
+        return jsonify({"success": False, "errors": ["OTP verification required for this action"]}), 403
+    else:
+        # For web requests, redirect to OTP verification
+        session["otp_action"] = action
+        session["otp_next_url"] = request.url
+        return redirect(url_for("otp.verify"))
