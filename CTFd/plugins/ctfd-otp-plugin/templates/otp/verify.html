@@ -37,7 +37,7 @@
                     {% endif %}
 
                     <form method="POST" action="{{ url_for('otp.verify') }}">
-                        <input type="hidden" name="nonce" value="{{ nonce }}">
+                        <input type="hidden" name="nonce" value="{{ Session.nonce }}">
                         
                         <div class="mb-4">
                             <label for="token" class="form-label">Enter OTP Code</label>
@@ -81,17 +81,4 @@
         </div>
     </div>
 </div>
-
-<style>
-#token {
-    font-family: monospace;
-    font-size: 2rem;
-    letter-spacing: 0.5em;
-    padding-left: 1em;
-}
-
-#token::placeholder {
-    letter-spacing: 0.3em;
-}
-</style>
 {% endblock %}

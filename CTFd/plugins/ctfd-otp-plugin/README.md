@@ -70,7 +70,7 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 - Uses TOTP (Time-based One-Time Password) algorithm
 - 6-digit codes that refresh every 30 seconds
 - OTP verification for admin actions is valid for 5 minutes
-- Secrets are stored securely in the database
+- Secrets are stored in plain text in the database. Consider enabling database encryption or application-level encryption for enhanced security in high-security environments.
 
 ## API Endpoints
 
@@ -85,11 +85,13 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 
 ### Decorator for Custom Actions
 
-You can protect your own admin actions using the `require_otp_for_action` decorator by importing it directly from the plugin module:
+You can protect your own admin actions using the `require_otp_for_action` decorator. Since the plugin directory uses hyphens (`ctfd-otp-plugin`), Python cannot import it directly. Use the plugin module access pattern:
 
 ```python
-# Import the decorator from the OTP plugin
-from CTFd.plugins.ctfd_otp_plugin import require_otp_for_action
+# Access the decorator through CTFd's plugin system
+import importlib
+otp_plugin = importlib.import_module("CTFd.plugins.ctfd-otp-plugin")
+require_otp_for_action = otp_plugin.require_otp_for_action
 
 @app.route('/admin/my-action', methods=['POST'])
 @admins_only
@@ -100,6 +102,14 @@ def my_protected_action():
 ```
 
 **Note:** Make sure to add a corresponding OTP setting (e.g., `otp_required_for_my_action`) in the admin settings if you want to make it configurable.
+
+## Integration Notes
+
+This plugin provides OTP infrastructure and admin action protection. To enforce OTP on user login, you would need to integrate with CTFd's authentication flow by:
+
+1. Modifying the login route to check for OTP requirement
+2. Setting `otp_pending_user_id` in session after password validation
+3. Redirecting to `/otp/verify` before completing login
 
 ## Requirements
 

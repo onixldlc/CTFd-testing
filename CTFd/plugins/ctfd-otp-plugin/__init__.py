@@ -65,7 +65,7 @@ def generate_otp_secret():
 def verify_otp(secret, token):
     """Verify an OTP token against a secret."""
     totp = pyotp.TOTP(secret)
-    return totp.verify(token)
+    return totp.verify(token, valid_window=1)
 
 
 def get_provisioning_uri(secret, email, issuer="CTFd"):
@@ -170,6 +170,12 @@ def setup():
         if action == "enable":
             # Verify the OTP token provided by user
             token = request.form.get("token", "").strip()
+
+            # Server-side validation of token format
+            if not token or len(token) != 6 or not token.isdigit():
+                flash("Invalid OTP format. Please enter a 6-digit code.", "danger")
+                return redirect(url_for("otp.setup"))
+
             otp_record = OTPSecrets.query.filter_by(user_id=user.id).first()
 
             if not otp_record:
@@ -202,13 +208,28 @@ def setup():
         elif action == "disable":
             # Verify current OTP before disabling
             token = request.form.get("token", "").strip()
+
+            # Server-side validation of token format
+            if not token or len(token) != 6 or not token.isdigit():
+                flash("Invalid OTP format. Please enter a 6-digit code.", "danger")
+                return redirect(url_for("otp.setup"))
+
             otp_record = OTPSecrets.query.filter_by(user_id=user.id).first()
 
             if otp_record and verify_otp(otp_record.secret, token):
                 db.session.delete(otp_record)
                 db.session.commit()
-                flash("OTP has been disabled.", "info")
-                return redirect(url_for("otp.setup"))
+                flash(
+                    "OTP has been disabled. You can set it up again anytime.",
+                    "info",
+                )
+                # Render the disabled confirmation to prevent auto-regeneration
+                return render_template(
+                    "otp/setup.html",
+                    otp_configured=False,
+                    otp_just_disabled=True,
+                    user=user,
+                )
             else:
                 flash("Invalid OTP token. Cannot disable OTP.", "danger")
                 return redirect(url_for("otp.setup"))
@@ -271,6 +292,11 @@ def verify():
     elif request.method == "POST":
         token = request.form.get("token", "").strip()
 
+        # Server-side validation of token format
+        if not token or len(token) != 6 or not token.isdigit():
+            flash("Invalid OTP format. Please enter a 6-digit code.", "danger")
+            return render_template("otp/verify.html", action=action, next_url=next_url)
+
         if pending_user_id:
             # Login OTP verification
             otp_record = OTPSecrets.query.filter_by(user_id=pending_user_id).first()
@@ -281,6 +307,7 @@ def verify():
                 if user:
                     session.pop("otp_pending_user_id", None)
                     session.pop("otp_next_url", None)
+                    session.pop("otp_action", None)
                     login_user(user)
                     flash("Login successful!", "success")
                     return redirect(next_url)
@@ -433,12 +460,8 @@ def require_otp_for_action(action):
 
 def load(app):
     """Load the OTP plugin."""
-    # Run database migrations
+    # Run database migrations (Alembic handles schema changes)
     upgrade(plugin_name="ctfd-otp-plugin")
-
-    # Create database tables if they don't exist
-    with app.app_context():
-        db.create_all()
 
     # Register blueprint
     app.register_blueprint(otp_bp)

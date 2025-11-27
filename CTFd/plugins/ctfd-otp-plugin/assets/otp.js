@@ -21,48 +21,10 @@
             if (input.getAttribute('autofocus') !== null) {
                 input.focus();
             }
-
-            // Submit form when 6 digits are entered
-            input.addEventListener('input', function(e) {
-                if (this.value.length === 6) {
-                    const form = this.closest('form');
-                    if (form && form.dataset.autoSubmit !== 'false') {
-                        // Small delay to allow user to see the complete input
-                        setTimeout(function() {
-                            form.submit();
-                        }, 200);
-                    }
-                }
-            });
         });
     }
 
-    /**
-     * Initialize QR code generation
-     */
-    function initQRCode() {
-        const qrcodeContainer = document.getElementById('qrcode');
-        const provisioningUri = qrcodeContainer ? qrcodeContainer.dataset.uri : null;
-
-        if (qrcodeContainer && provisioningUri && typeof QRCode !== 'undefined') {
-            QRCode.toCanvas(document.createElement('canvas'), provisioningUri, {
-                width: 200,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#ffffff'
-                }
-            }, function(error, canvas) {
-                if (error) {
-                    console.error('QR Code generation error:', error);
-                    qrcodeContainer.innerHTML = '<p class="text-danger">Failed to generate QR code</p>';
-                } else {
-                    qrcodeContainer.innerHTML = '';
-                    qrcodeContainer.appendChild(canvas);
-                }
-            });
-        }
-    }
+    // QR code generation is handled server-side
 
     /**
      * Copy secret to clipboard
@@ -197,7 +159,6 @@
      */
     function init() {
         initOTPInput();
-        initQRCode();
         initCopySecret();
         initSettingsToggle();
     }

@@ -1,7 +1,8 @@
 /* CTFd OTP Plugin Styles */
 
 /* OTP Input Styling */
-.otp-input {
+.otp-input,
+#token {
     font-family: monospace;
     font-size: 2rem;
     letter-spacing: 0.5em;
@@ -9,7 +10,8 @@
     text-align: center;
 }
 
-.otp-input::placeholder {
+.otp-input::placeholder,
+#token::placeholder {
     letter-spacing: 0.3em;
 }
 
@@ -53,8 +55,8 @@
 
 /* Form Switch Styling */
 .form-check.form-switch .form-check-input:checked {
-    background-color: #198754;
-    border-color: #198754;
+    background-color: var(--bs-success, #198754);
+    border-color: var(--bs-success, #198754);
 }
 
 /* Help Section */

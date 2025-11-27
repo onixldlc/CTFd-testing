@@ -23,7 +23,7 @@
                     {% endwith %}
 
                     <form method="POST" action="{{ url_for('otp.admin_settings') }}">
-                        <input type="hidden" name="nonce" value="{{ nonce }}">
+                        <input type="hidden" name="nonce" value="{{ Session.nonce }}">
                         
                         <!-- Global OTP Settings -->
                         <div class="card mb-4">
