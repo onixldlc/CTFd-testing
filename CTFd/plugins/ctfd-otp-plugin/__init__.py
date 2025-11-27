@@ -501,7 +501,7 @@ def setup():
                 backup_codes = generate_backup_codes(10)
                 store_backup_codes(otp_record, backup_codes)
 
-                # Reset backup code rate limiting
+                # Reset backup code rate limiting after successful OTP verification
                 otp_record.backup_code_attempts = 0
                 otp_record.backup_code_lockout_until = None
                 db.session.commit()
@@ -714,7 +714,8 @@ def verify():
                             session["otp_verified_timestamp"] = time.time()
                             session.pop("otp_action", None)
                             flash(
-                                "OTP verified. You may proceed with the action.", "success"
+                                "OTP verified. You may proceed with the action.",
+                                "success",
                             )
                             return redirect(next_url)
                         else:
