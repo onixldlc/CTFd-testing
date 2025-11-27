@@ -103,16 +103,14 @@ def is_otp_enabled_for_user(user_id):
 def get_otp_settings():
     """Get all OTP-related settings."""
     return {
-        "otp_enabled": get_config("otp_enabled") or False,
-        "otp_required_for_admins": get_config("otp_required_for_admins") or False,
-        "otp_required_for_clear_db": get_config("otp_required_for_clear_db") or False,
-        "otp_required_for_reset": get_config("otp_required_for_reset") or False,
-        "otp_required_for_export": get_config("otp_required_for_export") or False,
-        "otp_required_for_import": get_config("otp_required_for_import") or False,
-        "otp_required_for_user_delete": get_config("otp_required_for_user_delete")
-        or False,
-        "otp_required_for_config_change": get_config("otp_required_for_config_change")
-        or False,
+        "otp_enabled": get_config("otp_enabled"),
+        "otp_required_for_admins": get_config("otp_required_for_admins"),
+        "otp_required_for_clear_db": get_config("otp_required_for_clear_db"),
+        "otp_required_for_reset": get_config("otp_required_for_reset"),
+        "otp_required_for_export": get_config("otp_required_for_export"),
+        "otp_required_for_import": get_config("otp_required_for_import"),
+        "otp_required_for_user_delete": get_config("otp_required_for_user_delete"),
+        "otp_required_for_config_change": get_config("otp_required_for_config_change"),
     }
 
 
