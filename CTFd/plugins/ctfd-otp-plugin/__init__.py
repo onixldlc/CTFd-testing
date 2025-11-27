@@ -333,7 +333,17 @@ def setup():
                 flash("OTP setup not initialized. Please try again.", "danger")
                 return redirect(url_for("otp.setup"))
 
+            # Check rate limiting
+            is_allowed, time_remaining = check_otp_rate_limit(otp_record)
+            if not is_allowed:
+                flash(
+                    f"Too many failed OTP attempts. Please wait {time_remaining} seconds.",
+                    "danger",
+                )
+                return redirect(url_for("otp.setup"))
+
             if verify_otp(otp_record.secret, token):
+                record_otp_attempt(otp_record, success=True)
                 # Generate backup codes
                 backup_codes = generate_backup_codes(10)
                 store_backup_codes(otp_record, backup_codes)
@@ -350,6 +360,7 @@ def setup():
                     user=user,
                 )
             else:
+                record_otp_attempt(otp_record, success=False)
                 flash("Invalid OTP token. Please try again.", "danger")
                 provisioning_uri = get_provisioning_uri(
                     otp_record.secret,
@@ -378,7 +389,21 @@ def setup():
 
             otp_record = OTPSecrets.query.filter_by(user_id=user.id).first()
 
-            if otp_record and verify_otp(otp_record.secret, token):
+            if not otp_record:
+                flash("OTP not configured.", "danger")
+                return redirect(url_for("otp.setup"))
+
+            # Check rate limiting
+            is_allowed, time_remaining = check_otp_rate_limit(otp_record)
+            if not is_allowed:
+                flash(
+                    f"Too many failed OTP attempts. Please wait {time_remaining} seconds.",
+                    "danger",
+                )
+                return redirect(url_for("otp.setup"))
+
+            if verify_otp(otp_record.secret, token):
+                record_otp_attempt(otp_record, success=True)
                 db.session.delete(otp_record)
                 db.session.commit()
                 flash(
@@ -393,6 +418,7 @@ def setup():
                     user=user,
                 )
             else:
+                record_otp_attempt(otp_record, success=False)
                 flash("Invalid OTP token. Cannot disable OTP.", "danger")
                 return redirect(url_for("otp.setup"))
 
@@ -401,22 +427,38 @@ def setup():
             token = request.form.get("token", "").strip()
             otp_record = OTPSecrets.query.filter_by(user_id=user.id).first()
 
-            if (
-                otp_record
-                and otp_record.enabled
-                and verify_otp(otp_record.secret, token)
-            ):
-                new_secret = generate_otp_secret()
-                otp_record.secret = new_secret
-                otp_record.enabled = False
-                otp_record.backup_codes = None  # Clear backup codes
-                db.session.commit()
-                flash(
-                    "New OTP secret generated. Please set up your authenticator app again.",
-                    "info",
-                )
-            elif not otp_record or not otp_record.enabled:
-                # Not enabled yet, just regenerate
+            # If OTP is enabled, require verification with rate limiting
+            if otp_record and otp_record.enabled:
+                # Server-side validation of token format
+                if not token or len(token) != 6 or not token.isdigit():
+                    flash("Invalid OTP format. Please enter a 6-digit code.", "danger")
+                    return redirect(url_for("otp.setup"))
+
+                # Check rate limiting
+                is_allowed, time_remaining = check_otp_rate_limit(otp_record)
+                if not is_allowed:
+                    flash(
+                        f"Too many failed OTP attempts. Please wait {time_remaining} seconds.",
+                        "danger",
+                    )
+                    return redirect(url_for("otp.setup"))
+
+                if verify_otp(otp_record.secret, token):
+                    record_otp_attempt(otp_record, success=True)
+                    new_secret = generate_otp_secret()
+                    otp_record.secret = new_secret
+                    otp_record.enabled = False
+                    otp_record.backup_codes = None  # Clear backup codes
+                    db.session.commit()
+                    flash(
+                        "New OTP secret generated. Please set up your authenticator app again.",
+                        "info",
+                    )
+                else:
+                    record_otp_attempt(otp_record, success=False)
+                    flash("Invalid OTP token. Cannot regenerate secret.", "danger")
+            else:
+                # Not enabled yet, just regenerate without verification
                 if otp_record:
                     otp_record.secret = generate_otp_secret()
                 else:
@@ -426,8 +468,6 @@ def setup():
                     db.session.add(otp_record)
                 db.session.commit()
                 flash("New OTP secret generated.", "info")
-            else:
-                flash("Invalid OTP token. Cannot regenerate secret.", "danger")
 
             return redirect(url_for("otp.setup"))
 
@@ -442,16 +482,26 @@ def setup():
 
             otp_record = OTPSecrets.query.filter_by(user_id=user.id).first()
 
-            if (
-                otp_record
-                and otp_record.enabled
-                and verify_otp(otp_record.secret, token)
-            ):
+            if not otp_record or not otp_record.enabled:
+                flash("OTP is not enabled. Please enable OTP first.", "danger")
+                return redirect(url_for("otp.setup"))
+
+            # Check rate limiting
+            is_allowed, time_remaining = check_otp_rate_limit(otp_record)
+            if not is_allowed:
+                flash(
+                    f"Too many failed OTP attempts. Please wait {time_remaining} seconds.",
+                    "danger",
+                )
+                return redirect(url_for("otp.setup"))
+
+            if verify_otp(otp_record.secret, token):
+                record_otp_attempt(otp_record, success=True)
                 # Generate new backup codes
                 backup_codes = generate_backup_codes(10)
                 store_backup_codes(otp_record, backup_codes)
 
-                # Reset rate limiting
+                # Reset backup code rate limiting after successful OTP verification
                 otp_record.backup_code_attempts = 0
                 otp_record.backup_code_lockout_until = None
                 db.session.commit()
@@ -466,6 +516,7 @@ def setup():
                     backup_codes_regenerated=True,
                 )
             else:
+                record_otp_attempt(otp_record, success=False)
                 flash("Invalid OTP token. Cannot regenerate backup codes.", "danger")
                 return redirect(url_for("otp.setup"))
 
@@ -663,7 +714,8 @@ def verify():
                             session["otp_verified_timestamp"] = time.time()
                             session.pop("otp_action", None)
                             flash(
-                                "OTP verified. You may proceed with the action.", "success"
+                                "OTP verified. You may proceed with the action.",
+                                "success",
                             )
                             return redirect(next_url)
                         else:
