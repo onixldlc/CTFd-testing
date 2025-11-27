@@ -104,11 +104,63 @@ def my_protected_action():
 
 ## Integration Notes
 
-This plugin provides OTP infrastructure and admin action protection. To enforce OTP on user login, you would need to integrate with CTFd's authentication flow by:
+### Important: Login Flow Integration
 
-1. Modifying the login route to check for OTP requirement
-2. Setting `otp_pending_user_id` in session after password validation
-3. Redirecting to `/otp/verify` before completing login
+**This plugin does NOT automatically enforce OTP during user login.** The plugin provides the infrastructure for OTP (setup pages, verification pages, admin settings) and protects admin actions, but it does not hook into CTFd's authentication flow out of the box.
+
+#### Current Functionality (Works Without Modification)
+
+- ✅ OTP setup and management for users
+- ✅ Admin settings to configure OTP requirements
+- ✅ Protection for admin actions (clear DB, reset, delete users, etc.) via the `@require_otp_for_action` decorator
+- ✅ OTP verification page infrastructure
+
+#### Requires CTFd Core Modifications
+
+To enforce OTP during login, you need to modify CTFd's authentication routes. Here's how:
+
+1. **Modify the login route** in `CTFd/auth.py`:
+
+   ```python
+   # After successful password validation but before login_user():
+   from CTFd.plugins import get_plugin
+
+   # Check if OTP is required for this user
+   otp_plugin = get_plugin("ctfd-otp-plugin")
+   if otp_plugin and otp_plugin.is_otp_enabled_for_user(user.id):
+       session["otp_pending_user_id"] = user.id
+       session["otp_next_url"] = request.args.get("next", url_for("challenges.listing"))
+       return redirect(url_for("otp.verify"))
+
+   # Otherwise, proceed with normal login
+   login_user(user)
+   ```
+
+2. **Set the session variable** `otp_pending_user_id` to the user's ID after password validation
+
+3. **Redirect to `/otp/verify`** instead of completing the login immediately
+
+4. The plugin's verify route will handle OTP verification and complete the login
+
+#### Alternative: Middleware Approach
+
+You can also create a middleware or use Flask's `before_request` hook to check if authenticated users need OTP verification, though this is more complex and may affect performance.
+
+### Admin Action Protection
+
+The `@require_otp_for_action` decorator works without any core modifications. To protect a custom admin action:
+
+```python
+import importlib
+otp_plugin = importlib.import_module("CTFd.plugins.ctfd-otp-plugin")
+
+@app.route('/admin/dangerous-action', methods=['POST'])
+@admins_only
+@otp_plugin.require_otp_for_action('dangerous_action')
+def dangerous_action():
+    # This action requires OTP verification
+    pass
+```
 
 ## Requirements
 
