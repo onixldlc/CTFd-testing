@@ -74,12 +74,11 @@ A two-factor authentication (OTP/TOTP) plugin for CTFd that adds an extra layer 
 
 ## API Endpoints
 
-| Endpoint              | Method   | Description                     |
-| --------------------- | -------- | ------------------------------- |
-| `/otp/setup`          | GET/POST | OTP setup and management page   |
-| `/otp/verify`         | GET/POST | OTP verification page           |
-| `/otp/admin/settings` | GET/POST | Admin settings page             |
-| `/otp/check`          | POST     | API to check OTP token validity |
+| Endpoint              | Method   | Description                   |
+| --------------------- | -------- | ----------------------------- |
+| `/otp/setup`          | GET/POST | OTP setup and management page |
+| `/otp/verify`         | GET/POST | OTP verification page         |
+| `/otp/admin/settings` | GET/POST | Admin settings page           |
 
 ## Development
 

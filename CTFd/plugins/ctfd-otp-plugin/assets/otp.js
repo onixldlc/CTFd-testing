@@ -111,30 +111,6 @@
     }
 
     /**
-     * Verify OTP via AJAX
-     */
-    function verifyOTPAjax(token, callback) {
-        const formData = new FormData();
-        formData.append('token', token);
-        formData.append('nonce', window.init ? window.init.csrfNonce : '');
-
-        fetch('/otp/check', {
-            method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            callback(null, data);
-        })
-        .catch(function(error) {
-            callback(error, null);
-        });
-    }
-
-    /**
      * Toggle setting visibility based on master switch
      */
     function initSettingsToggle() {
@@ -172,7 +148,6 @@
 
     // Expose some functions globally if needed
     window.CTFdOTP = {
-        verifyOTPAjax: verifyOTPAjax,
         showToast: showToast
     };
 })();

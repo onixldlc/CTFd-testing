@@ -383,27 +383,6 @@ def admin_settings():
         return redirect(url_for("otp.admin_settings"))
 
 
-@otp_bp.route("/check", methods=["POST"])
-@authed_only
-def check_otp():
-    """API endpoint to check OTP token validity."""
-    token = request.form.get("token", "").strip()
-    user = get_current_user()
-
-    if not user:
-        return {"success": False, "message": "Not authenticated"}, 401
-
-    otp_record = OTPSecrets.query.filter_by(user_id=user.id).first()
-
-    if not otp_record:
-        return {"success": False, "message": "OTP not configured"}, 400
-
-    if verify_otp(otp_record.secret, token):
-        return {"success": True, "message": "OTP verified"}
-    else:
-        return {"success": False, "message": "Invalid OTP token"}, 400
-
-
 def require_otp_for_action(action):
     """
     Decorator to require OTP verification for sensitive admin actions.
